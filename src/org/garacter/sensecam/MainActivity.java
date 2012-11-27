@@ -1,7 +1,13 @@
 package org.garacter.sensecam;
 
+import org.garacter.sensecam.R;
+
 import android.app.ActionBar;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 
 import android.support.v4.app.Fragment;
@@ -14,10 +20,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class MainActivity extends FragmentActivity implements
-		ActionBar.OnNavigationListener {
+		ActionBar.OnNavigationListener, SensorEventListener {
+	
+	private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+    private Sensor mGyroscope;
+    
+    private float[] accelerometerData;
+    private float[] gyroscopeData;
 
 	/**
 	 * The serialization (saved instance state) Bundle key representing the
@@ -43,6 +57,15 @@ public class MainActivity extends FragmentActivity implements
 						android.R.id.text1, new String[] {
 								getString(R.string.title_section1),
 								getString(R.string.title_section2) }), this);
+		
+		//data
+		accelerometerData 	= new float[3];
+		gyroscopeData 		= new float[3];
+		
+		//sensor
+    	mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mGyroscope	   = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 	}
 
 	@Override
@@ -53,6 +76,19 @@ public class MainActivity extends FragmentActivity implements
 					savedInstanceState.getInt(STATE_SELECTED_NAVIGATION_ITEM));
 		}
 	}
+	
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener(this);
+    }
+	
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
+    }
 
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
@@ -93,6 +129,50 @@ public class MainActivity extends FragmentActivity implements
 		
 		return true;
 		
+	}
+
+	@Override
+	public void onAccuracyChanged(Sensor arg0, int arg1) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onSensorChanged(SensorEvent event) {	
+		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER){
+			float axisX = event.values[0];
+			float axisY = event.values[1];
+			float axisZ = event.values[2];
+			
+			ProgressBar aX = (ProgressBar) findViewById(R.id.ProgressBarAccX);
+			ProgressBar aY = (ProgressBar) findViewById(R.id.ProgressBarAccY);
+			ProgressBar aZ = (ProgressBar) findViewById(R.id.ProgressBarAccZ);
+			aX.setProgress((int)Math.abs(axisX*100));
+			aY.setProgress((int)Math.abs(axisY*100));
+			aZ.setProgress((int)Math.abs(axisZ*100));
+			
+			accelerometerData[0] = axisX;
+			accelerometerData[1] = axisY;
+			accelerometerData[2] = axisZ;
+			
+		}else if(event.sensor.getType() == Sensor.TYPE_GYROSCOPE){
+			float axisX = event.values[0];
+			float axisY = event.values[1];
+			float axisZ = event.values[2];
+			
+			ProgressBar gX = (ProgressBar) findViewById(R.id.ProgressBarGyroX);
+			ProgressBar gY = (ProgressBar) findViewById(R.id.ProgressBarGyroY);
+			ProgressBar gZ = (ProgressBar) findViewById(R.id.ProgressBarGyroZ);
+			
+			gX.setProgress((int)Math.abs(axisX*180/Math.PI));
+			gY.setProgress((int)Math.abs(axisY*180/Math.PI));
+			gZ.setProgress((int)Math.abs(axisZ*180/Math.PI));
+			
+			gyroscopeData[0] = axisX;
+			gyroscopeData[1] = axisY;
+			gyroscopeData[2] = axisZ;
+			
+		}
 	}
 
 }
