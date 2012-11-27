@@ -1,5 +1,11 @@
 package org.garacter.sensecam;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Timer;
+
 import org.garacter.sensecam.R;
 
 import android.app.ActionBar;
@@ -19,6 +25,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -32,18 +39,26 @@ public class MainActivity extends FragmentActivity implements
     
     private float[] accelerometerData;
     private float[] gyroscopeData;
-
+    private Queue<SensorData> sensorQueue = new LinkedList<SensorData>();
+    
+    private Timer timer_queue;
+    
 	/**
 	 * The serialization (saved instance state) Bundle key representing the
 	 * current dropdown position.
 	 */
 	private static final String STATE_SELECTED_NAVIGATION_ITEM = "selected_navigation_item";
+	private static final int SIZE_OF_QUEUE = 10000;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		//keep screen on
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); 
+		
 		setContentView(R.layout.activity_main);
-
+		System.out.println("onCreate.");
 		// Set up the action bar to show a dropdown list.
 		final ActionBar actionBar = getActionBar();
 		actionBar.setDisplayShowTitleEnabled(true);
@@ -66,6 +81,12 @@ public class MainActivity extends FragmentActivity implements
     	mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mGyroscope	   = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        
+        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
+        
+        timer_queue = new Timer();
+        timer_queue.scheduleAtFixedRate(new OfferData2QueueTask(this), 10, 10);
 	}
 
 	@Override
@@ -80,14 +101,13 @@ public class MainActivity extends FragmentActivity implements
     @Override
     protected void onPause() {
         super.onPause();
-        mSensorManager.unregisterListener(this);
+        System.out.println("onPause.");
     }
 	
     @Override
     protected void onResume() {
         super.onResume();
-        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
-        mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
+        System.out.println("onResume.");
     }
 
 	@Override
@@ -102,6 +122,15 @@ public class MainActivity extends FragmentActivity implements
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.activity_main, menu);
 		return true;
+	}
+	
+	@Override
+	public void onDestroy(){
+		super.onDestroy();
+		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); 
+		mSensorManager.unregisterListener(this);
+		mSensorManager.unregisterListener(this);
+		cancelTimer();
 	}
 
 	@Override
@@ -138,7 +167,7 @@ public class MainActivity extends FragmentActivity implements
 	}
 
 	@Override
-	public void onSensorChanged(SensorEvent event) {	
+	public void onSensorChanged(SensorEvent event) {
 		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER){
 			float axisX = event.values[0];
 			float axisY = event.values[1];
@@ -173,6 +202,36 @@ public class MainActivity extends FragmentActivity implements
 			gyroscopeData[2] = axisZ;
 			
 		}
+	}
+	
+	private void cancelTimer() {
+		if (timer_queue != null) 
+			timer_queue.cancel();
+		
+	}
+	
+	private String makeDateString(){
+		Date now = new Date();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+        
+		return sdf.format(now);
+	}
+	
+	public void offer2queue(){
+		
+		//append accelerometer and gyroscope data to queues
+		if(accelerometerData != null && gyroscopeData != null)
+			sensorQueue.offer(new SensorData(
+									makeDateString(), 
+									new Tuple3f(accelerometerData[0], accelerometerData[1], accelerometerData[2]),
+									new Tuple3f(gyroscopeData[0], gyroscopeData[1], gyroscopeData[2]) ) );
+		
+		// Limit the size of queue 
+		while(sensorQueue.size() > SIZE_OF_QUEUE ){
+			sensorQueue.poll();
+		}
+		//System.out.println(sensorQueue.size());
+		
 	}
 
 }
