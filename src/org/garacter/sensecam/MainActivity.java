@@ -22,13 +22,9 @@ import android.support.v4.app.NavUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 public class MainActivity extends FragmentActivity implements
 		ActionBar.OnNavigationListener, SensorEventListener {

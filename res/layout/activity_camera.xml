@@ -5,11 +5,10 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity"
     tools:ignore="MergeRootFrame" >
-
-    <TextView
-        android:id="@+id/textView1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Camera" />
-
+	
+    <SurfaceView
+    android:id="@+id/surface_view"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" />
+    
 </FrameLayout>
